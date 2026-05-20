@@ -1,3 +1,4 @@
+import API_URL from "./config";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { onAuthStateChanged } from "firebase/auth";
@@ -13,6 +14,7 @@ import AdminPanel from "./pages/AdminPanel";
 import ScheduleEmail from "./pages/ScheduleEmail";
 
 import "./App.css";
+
 
 export default function App() {
   const [input, setInput] = useState("");
@@ -71,7 +73,8 @@ export default function App() {
     }
 
     try {
-      const res = await axios.post("http://127.0.0.1:8000/chat", {
+      // ✅ FIX: added axios.post(
+      const res = await axios.post(`${API_URL}/chat`, {
         message: text,
       });
 
@@ -97,7 +100,8 @@ export default function App() {
   const onSendDraft = async (draft) => {
     if (!draft) return;
     try {
-      const res = await axios.post("http://127.0.0.1:8000/chat", {
+      // ✅ FIX: added axios.post(
+      const res = await axios.post(`${API_URL}/chat`, {
         message: "send",
       });
 
@@ -119,7 +123,8 @@ export default function App() {
 
   const onCancelDraft = async (msgIndex) => {
     try {
-      await axios.post("http://127.0.0.1:8000/chat", {
+      // ✅ FIX: added axios.post(
+      await axios.post(`${API_URL}/chat`, {
         message: "cancel",
       });
 
@@ -138,7 +143,6 @@ export default function App() {
 
     const chatId = await getChatId(`auto reply to email ${emailIndex}`);
 
-    // Show locally without saving to Firebase
     setMessages((prev) => [
       ...prev,
       {
@@ -149,7 +153,8 @@ export default function App() {
     ]);
 
     try {
-      const res = await axios.post("http://127.0.0.1:8000/chat", {
+      // ✅ FIX: added axios.post(
+      const res = await axios.post(`${API_URL}/chat`, {
         message: `auto reply to email ${emailIndex}`,
       });
 

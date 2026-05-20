@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -13,7 +14,8 @@ export default function ScheduleEmail({ onBack }) {
 
   const fetchJobs = async () => {
     try {
-      const res = await axios.get("http://127.0.0.1:8000/scheduled-emails");
+      // ✅ FIX: fixed broken template literal
+      const res = await axios.get(`${API_URL}/scheduled-emails`);
       setJobs(res.data.jobs || []);
     } catch (e) {
       console.error("Failed to fetch jobs:", e);
@@ -47,7 +49,8 @@ export default function ScheduleEmail({ onBack }) {
 
       console.log("Sending:", { to, subject, body, send_at: isoDate });
 
-      const res = await axios.post("http://127.0.0.1:8000/schedule-email", {
+      // ✅ FIX: fixed broken template literal
+      const res = await axios.post(`${API_URL}/schedule-email`, {
         to,
         subject,
         body,
