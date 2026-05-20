@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime  # ADD THIS
+from datetime import datetime
 
-from src.groq_email_agent.agent.main_agent import run_system
-from src.groq_email_agent.tools.gmail_tools import send_email, get_unread_emails
-from src.groq_email_agent.tools.scheduler import schedule_email, get_scheduled_jobs  # ADD THIS
+from src.groq_email_agent.agent.chat_workflow import run_chat_workflow
+from src.groq_email_agent.tools.gmail_tools import get_unread_emails
+from src.groq_email_agent.tools.scheduler import schedule_email, get_scheduled_jobs
 
 import base64
 import requests
@@ -23,11 +23,7 @@ app.add_middleware(
 
 class Query(BaseModel):
     message: str
-
-class Email(BaseModel):
-    to: str
-    subject: str
-    body: str
+    user_id: str = "default"
 
 class ScheduledEmail(BaseModel):
     to: str
@@ -43,22 +39,12 @@ class OAuthEmail(BaseModel):
 
 @app.post("/chat")
 def chat(data: Query):
-    result = run_system(data.message)
+    result = run_chat_workflow(data.user_id, data.message)
     return result
 
 @app.get("/emails")
 def emails():
     return {"emails": get_unread_emails()}
-
-@app.post("/schedule-email")
-def schedule_mail(email: ScheduledEmail):
-    send_at = datetime.fromisoformat(email.send_at)
-    result = schedule_email(email.to, email.subject, email.body, send_at)
-    return result
-
-@app.get("/scheduled-emails")
-def get_scheduled():
-    return {"jobs": get_scheduled_jobs()}
 
 @app.post("/send-email")
 def send_mail(email: OAuthEmail):
@@ -77,3 +63,13 @@ def send_mail(email: OAuthEmail):
         return {"status": "error", "detail": res.json()}
 
     return {"status": "sent"}
+
+@app.post("/schedule-email")
+def schedule_mail(email: ScheduledEmail):
+    send_at = datetime.fromisoformat(email.send_at)
+    result = schedule_email(email.to, email.subject, email.body, send_at)
+    return result
+
+@app.get("/scheduled-emails")
+def get_scheduled():
+    return {"jobs": get_scheduled_jobs()}
