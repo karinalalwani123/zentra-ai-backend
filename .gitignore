@@ -1,0 +1,21 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment
+.env
+
+# Credentials
+serviceAccountKey.json
+*.json
+token.pickle
+credentials.json
+
+# IDE
+.vscode/
+.idea/
+node_modules/ 

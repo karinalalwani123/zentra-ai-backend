@@ -1,0 +1,1127 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f5f5;
+}
+
+/* 3-column layout */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+/* LEFT SIDEBAR */
+.left-sidebar {
+  width: 220px;
+  min-width: 220px;
+  background: #1a1a2e;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 16px 12px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.sidebar-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.new-chat-btn {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.new-chat-btn:hover {
+  background: #4338ca;
+}
+
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.no-chats {
+  font-size: 12px;
+  color: #888;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.chat-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  background: #2a2a4a;
+  color: #ccc;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.chat-item:hover {
+  background: #3a3a5a;
+  color: #fff;
+}
+
+.logout-btn {
+  margin: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #3a3a5a;
+  background: transparent;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.logout-btn:hover {
+  background: #2a2a4a;
+  color: #fff;
+}
+
+/* CHAT WINDOW */
+.chat-window {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f5f5f5;
+}
+
+.chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+  background: #ffffff;
+}
+
+.chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty-state {
+  margin: auto;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 600;
+  color: #ccc;
+}
+
+.message {
+  display: flex;
+  max-width: 70%;
+}
+
+.message.user {
+  align-self: flex-end;
+}
+
+.message.bot {
+  align-self: flex-start;
+}
+
+.bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message.user .bubble {
+  background: #4f46e5;
+  color: #ffffff;
+  border-bottom-right-radius: 4px;
+}
+
+.message.bot .bubble {
+  background: #ffffff;
+  color: #111;
+  border: 1px solid #e5e5e5;
+  border-bottom-left-radius: 4px;
+}
+
+/* INPUT BAR */
+.input-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e5e5;
+  background: #ffffff;
+}
+
+.input-bar input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+
+.input-bar input:focus {
+  border-color: #4f46e5;
+}
+
+.input-bar button {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.input-bar button:hover {
+  background: #4338ca;
+}
+
+.mic-btn {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #f0f0f0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.mic-btn:hover {
+  background: #e0e0e0;
+}
+
+/* RIGHT SIDEBAR */
+.right-sidebar {
+  width: 200px;
+  min-width: 200px;
+  background: #f9f9f9;
+  border-left: 1px solid #e5e5e5;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.bubble h1, .bubble h2, .bubble h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 10px 0 6px;
+  color: #111;
+}
+
+.bubble p {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.bubble ul, .bubble ol {
+  margin: 6px 0 8px 18px;
+  line-height: 1.8;
+}
+
+.bubble code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.bubble pre {
+  background: #f0f0f0;
+  padding: 10px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 13px;
+  margin: 8px 0;
+}
+
+.bubble strong {
+  font-weight: 600;
+  color: #111;
+}
+
+.bubble hr {
+  border: none;
+  border-top: 1px solid #e5e5e5;
+  margin: 10px 0;
+}
+
+.chat-item.active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.auth-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+}
+
+.auth-box {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-box h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: #888;
+  text-align: center;
+  margin-top: -6px;
+}
+
+.auth-error {
+  font-size: 13px;
+  color: #e53e3e;
+  background: #fff5f5;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #feb2b2;
+}
+
+.auth-success {
+  font-size: 13px;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+
+.auth-input:focus {
+  border-color: #4f46e5;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.auth-btn-login {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.auth-btn-login:hover {
+  background: #4338ca;
+}
+
+.auth-btn-register {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: transparent;
+  color: #444;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.auth-btn-register:hover {
+  background: #f0f0f0;
+}
+
+.auth-switch {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #888;
+  text-align: center;
+}
+
+.auth-link {
+  color: #4f46e5;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.loading-screen {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  color: #888;
+}
+
+/* ADMIN SHELL */
+.admin-shell {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.admin-topbar h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.admin-signout {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #3a3a5a;
+  background: transparent;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.admin-signout:hover {
+  background: #2a2a4a;
+  color: #fff;
+}
+
+/* TABS */
+.admin-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.admin-tab {
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  color: #888;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: inherit;
+}
+
+.admin-tab.active {
+  color: #4f46e5;
+  border-bottom: 2px solid #4f46e5;
+  font-weight: 600;
+}
+
+/* CONTENT */
+.admin-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+}
+
+/* STATS */
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 20px 24px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111;
+}
+
+.admin-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 12px;
+}
+
+/* TABLE — ✅ fixed column widths to give actions enough room */
+.admin-table {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.admin-table-header {
+  display: grid;
+  grid-template-columns: 1fr 90px 360px;
+  padding: 10px 16px;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-table-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 360px;
+  padding: 12px 16px;
+  align-items: center;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13.5px;
+  gap: 8px;
+}
+
+.admin-table-row:last-child {
+  border-bottom: none;
+}
+
+.admin-email {
+  color: #111;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.admin-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.admin-badge.admin {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.admin-badge.user {
+  background: #f0f0f0;
+  color: #555;
+}
+
+/* ✅ ACTION BUTTONS — spaced out properly */
+.admin-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.admin-btn-view {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  color: #333;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-btn-view:hover { background: #f0f0f0; }
+
+.admin-btn-promote {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-btn-promote:hover { background: #4338ca; }
+
+.admin-btn-delete {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-btn-delete:hover { background: #fecaca; }
+
+/* CHATS LAYOUT */
+.admin-chats-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  height: calc(100vh - 160px);
+}
+
+.admin-chat-list {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.admin-chat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+}
+
+.admin-chat-item:hover { background: #f5f5f5; }
+
+.admin-chat-item.active {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+}
+
+.admin-chat-title {
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.admin-btn-delete-sm {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.admin-btn-delete-sm:hover { background: #fee2e2; }
+
+.admin-messages {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.admin-empty-messages {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.admin-message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-message {
+  padding: 10px 14px;
+  border-radius: 10px;
+  max-width: 80%;
+}
+
+.admin-message.user {
+  background: #ede9fe;
+  align-self: flex-end;
+}
+
+.admin-message.bot {
+  background: #f5f5f5;
+  align-self: flex-start;
+}
+
+.admin-message-role {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #888;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.admin-message-text {
+  font-size: 13.5px;
+  color: #111;
+  line-height: 1.5;
+}
+
+.admin-empty {
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* RIGHT SIDEBAR */
+.right-sidebar-label {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: auto;
+}
+
+/* SCHEDULE PAGE */
+.schedule-shell {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.schedule-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 28px;
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.schedule-header h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.schedule-back-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid #3a3a5a;
+  background: transparent;
+  color: #aaa;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.schedule-back-btn:hover {
+  background: #2a2a4a;
+  color: #fff;
+}
+
+.schedule-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 24px 28px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.schedule-form-card,
+.schedule-jobs-card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.schedule-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+}
+
+.schedule-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.schedule-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schedule-input {
+  padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 13.5px;
+  outline: none;
+  font-family: inherit;
+  color: #111;
+}
+
+.schedule-input:focus {
+  border-color: #4f46e5;
+}
+
+.schedule-textarea {
+  padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 13.5px;
+  outline: none;
+  font-family: inherit;
+  color: #111;
+  resize: vertical;
+}
+
+.schedule-textarea:focus {
+  border-color: #4f46e5;
+}
+
+.schedule-btn {
+  padding: 11px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 4px;
+}
+
+.schedule-btn:hover { background: #4338ca; }
+.schedule-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+.schedule-error {
+  font-size: 13px;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.schedule-success {
+  font-size: 13px;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.schedule-empty {
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.schedule-job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-job-item {
+  padding: 12px 14px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-job-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.schedule-job-to {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+}
+
+.schedule-job-subject {
+  font-size: 12.5px;
+  color: #555;
+}
+
+.schedule-job-time {
+  font-size: 11.5px;
+  color: #aaa;
+}
+
+.schedule-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.badge-pending {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badge-sent {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.schedule-open-btn {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #f0f0f0;
+  color: #333;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.schedule-open-btn:hover {
+  background: #e5e5e5;
+}
+
+.email-draft {
+  background: #f9f9f9;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.email-field {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.email-label {
+  font-weight: 600;
+  color: #4f46e5;
+  min-width: 60px;
+}
+
+.email-value {
+  color: #111;
+}
+
+.email-body-label {
+  font-weight: 600;
+  color: #4f46e5;
+  margin: 10px 0 6px;
+  border-top: 1px solid #e5e5e5;
+  padding-top: 10px;
+}
+
+.email-body-line {
+  color: #333;
+  margin: 0 0 4px;
+  line-height: 1.7;
+}
+
+/* EMAIL CARD LIST */
+.email-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 12px;
+}
+
+.email-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.email-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.email-card-spam      { border-left: 4px solid #dc2626; }
+.email-card-promotion { border-left: 4px solid #f59e0b; }
+.email-card-replying  { border-left: 4px solid #4f46e5; }
+.email-card-important { border-left: 4px solid #16a34a; }
+
+.email-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.email-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.email-card-from {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+}
+
+.email-card-date {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.email-card-subject {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.email-card-preview {
+  font-size: 12.5px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.email-card-reason {
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+}
+
+/* CATEGORY BADGES */
+.email-category-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-spam      { background: #fee2e2; color: #991b1b; }
+.badge-promotion { background: #fef3c7; color: #92400e; }
+.badge-replying  { background: #ede9fe; color: #5b21b6; }
+.badge-important { background: #dcfce7; color: #166534; }
+
+/* AUTO REPLY BUTTON */
+.email-auto-reply-btn {
+  margin-top: 4px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 12.5px;
+  cursor: pointer;
+  align-self: flex-start;
+  font-family: inherit;
+}
+
+.email-auto-reply-btn:hover {
+  background: #4338ca;
+}
