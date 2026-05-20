@@ -8,9 +8,11 @@ __pycache__/
 
 # Environment
 .env
+.env
 
 # Credentials
 serviceAccountKey.json
+
 token.pickle
 credentials.json
 
