@@ -15,12 +15,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://zentra-ai-backend-cexo.onrender.com",
-        "https://zentra-ai-backend.vercel.app",  # ✅ replace with your actual Vercel URL
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
