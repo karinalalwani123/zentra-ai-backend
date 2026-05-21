@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+import threading
+import time
 
 from src.groq_email_agent.agent.chat_workflow import run_chat_workflow
 from src.groq_email_agent.tools.gmail_tools import get_unread_emails
@@ -37,6 +39,13 @@ class OAuthEmail(BaseModel):
     subject: str
     body: str
 
+# ===== KEEP ALIVE =====
+@app.get("/ping")
+def ping():
+    """Health check endpoint for UptimeRobot"""
+    return {"status": "ok", "message": "Backend is awake"}
+
+# ===== CHAT ENDPOINTS =====
 @app.post("/chat")
 def chat(data: Query):
     result = run_chat_workflow(data.user_id, data.message)
@@ -73,3 +82,26 @@ def schedule_mail(email: ScheduledEmail):
 @app.get("/scheduled-emails")
 def get_scheduled():
     return {"jobs": get_scheduled_jobs()}
+
+# ===== STARTUP EVENT =====
+@app.on_event("startup")
+def startup_event():
+    """Start keep-alive thread on server startup"""
+    def keep_alive():
+        """Ping self every 10 minutes to prevent spindown"""
+        time.sleep(60)  # Wait 1 minute before first ping
+        while True:
+            time.sleep(600)  # 10 minutes
+            try:
+                requests.get("https://zentra-ai-backend-cexo.onrender.com/ping", timeout=5)
+                print("✅ Keep-alive ping sent")
+            except Exception as e:
+                print(f"⚠️ Keep-alive ping failed: {e}")
+    
+    thread = threading.Thread(target=keep_alive, daemon=True)
+    thread.start()
+    print("🔔 Keep-alive thread started")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
