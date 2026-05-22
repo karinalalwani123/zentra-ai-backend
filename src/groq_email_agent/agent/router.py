@@ -51,9 +51,15 @@ def route(query: str):
     ]):
         return "read_email"
 
-    # Explicit web search intent
+    # ✅ FIX: Expanded web search intent
     if any(word in q for word in [
-        "google it", "search the web", "look up online", "browse"
+        "google it", "search the web", "look up online", "browse",
+        "latest news", "current news", "today's news", "recent news",
+        "what is happening", "news today", "headlines", "top news",
+        "search for", "find out", "look up", "search",
+        "latest", "recent", "current", "trending",
+        "what happened", "today in", "breaking news",
+        "2024", "2025", "2026"
     ]):
         return "web"
 
