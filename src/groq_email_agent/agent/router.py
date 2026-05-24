@@ -51,15 +51,39 @@ def route(query: str):
     ]):
         return "read_email"
 
-    # ✅ FIX: Expanded web search intent
+    # Web search intent
     if any(word in q for word in [
+        # Search triggers
         "google it", "search the web", "look up online", "browse",
+        "search for", "find out", "look up", "search",
+
+        # News triggers
         "latest news", "current news", "today's news", "recent news",
         "what is happening", "news today", "headlines", "top news",
-        "search for", "find out", "look up", "search",
-        "latest", "recent", "current", "trending",
-        "what happened", "today in", "breaking news",
-        "2024", "2025", "2026"
+        "breaking news", "what happened", "today in",
+
+        # Time triggers
+        "latest", "recent", "current", "trending", "today",
+        "2024", "2025", "2026",
+
+        # Price triggers
+        "price", "prices", "rate", "rates",
+        "gold", "silver", "bitcoin", "crypto",
+        "stock", "market", "sensex", "nifty",
+        "petrol", "diesel", "exchange rate",
+        "how much", "cost",
+
+        # Weather triggers
+        "weather", "temperature", "forecast",
+        "humidity", "rain", "sunny",
+
+        # Sports triggers
+        "score", "match", "ipl", "cricket",
+        "football", "fifa", "olympics",
+
+        # Tech/general current info
+        "who is", "who won", "who is the",
+        "what is the latest", "tell me about today"
     ]):
         return "web"
 
