@@ -204,7 +204,18 @@ def web_search_node_handler(state: ChatState) -> ChatState:
         context = "\n\n".join([f"{r['title']}:\n{r['content']}" for r in top])
 
         response = chat_node({
-            "input": f"Answer: {state['message']}\n\nContext: {context}"
+            "input": f"""Answer this question: {state['message']}
+
+Use this context:
+{context}
+
+IMPORTANT:
+- Use only the MOST RECENT and RELIABLE source
+- If prices conflict between sources, mention the range
+- Always mention the source date if available
+- For prices, show the most commonly cited figure
+- For news, show only latest headlines
+- Never use your training data, only use the context above"""
         })
         state["response"] = response.get("response", "")
 
