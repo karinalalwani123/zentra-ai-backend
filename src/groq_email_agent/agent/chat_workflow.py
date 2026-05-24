@@ -199,23 +199,56 @@ def cancel_email_node_handler(state: ChatState) -> ChatState:
 # ===== WEB SEARCH NODE =====
 def web_search_node_handler(state: ChatState) -> ChatState:
     if state["mode"] == "web":
-        results = search_web(state["message"])
-        top = results.get("results", [])[:3]
-        context = "\n\n".join([f"{r['title']}:\n{r['content']}" for r in top])
+        from datetime import date
+        today = date.today().strftime("%d %B %Y")
+
+        q = state["message"].lower()
+
+        # Add today's date to make search more current
+        search_query = f"{state['message']} {today}"
+
+        results = search_web(search_query)
+
+        # Get direct answer from Tavily
+        direct_answer = results.get("answer", "")
+
+        # Get top 5 results with full content
+        top = results.get("results", [])[:5]
+        context = "\n\n".join([
+            f"Source: {r['title']}\n"
+            f"URL: {r.get('url', '')}\n"
+            f"Content: {r.get('raw_content') or r.get('content', '')}"
+            for r in top
+        ])
+
+        # Build full context
+        full_context = ""
+        if direct_answer:
+            full_context += f"Direct Answer from Web: {direct_answer}\n\n"
+        full_context += context
+
+        print(f"🔍 Search query: {search_query}")
+        print(f"📌 Direct answer: {direct_answer[:100] if direct_answer else 'None'}")
+        print(f"📰 Results found: {len(top)}")
 
         response = chat_node({
-            "input": f"""Answer this question: {state['message']}
+            "input": f"""You are answering a real-time web search query.
 
-Use this context:
-{context}
+Question: {state['message']}
+Today's Date: {today}
 
-IMPORTANT:
-- Use only the MOST RECENT and RELIABLE source
-- If prices conflict between sources, mention the range
-- Always mention the source date if available
-- For prices, show the most commonly cited figure
-- For news, show only latest headlines
-- Never use your training data, only use the context above"""
+Web Search Results:
+{full_context}
+
+STRICT RULES:
+- ONLY use the web search results above
+- NEVER use your training data or prior knowledge
+- ALWAYS start with the most current and accurate answer
+- For prices: show exact figure, source name, and today's date
+- For news: show headlines with source names
+- Keep response clean and well formatted
+- Do NOT say "context does not provide" — if answer not found say "Could not find current data, please try again"
+- Always end with: Source: [name] | Date: {today}"""
         })
         state["response"] = response.get("response", "")
 
