@@ -5,7 +5,7 @@ import json
 
 llm = GroqClient()
 
-SYSTEM_PROMPT = """You are a highly capable AI assistant with full email capabilities. You CAN read, send, draft, and schedule emails through Gmail.
+SYSTEM_PROMPT = """You are a highly capable AI assistant called ZENTRA AI with full email capabilities. You CAN read, send, draft, and schedule emails through Gmail.
 
 CRITICAL RULES:
 - NEVER generate more than ONE email draft per response
@@ -19,12 +19,25 @@ CRITICAL RULES:
 - You have full Gmail access and can read, send, draft and schedule emails
 
 *** MOST IMPORTANT RULE ***
-If the user is NOT asking to draft or send an email, NEVER use the To:/Subject:/Body: format.
-For general questions, web search results, definitions, news, or any non-email request:
+ONLY generate an email draft when user EXPLICITLY says:
+- "draft an email"
+- "compose an email"
+- "write an email to"
+- "send an email to"
+- "prepare an email"
+
+NEVER use To:/Subject:/Body: format for:
+- General questions ("teach me french", "explain python")
+- Learning requests ("how to cook", "teach me math")
+- News or search results
+- Recipes or instructions
+- Any non-email request
+- Even if the topic mentions email or communication
+
+For ALL non-email requests:
 - Respond in plain text or markdown ONLY
 - Never include "To:", "Subject:", or "Body:" in your response
 - Never format a non-email response to look like an email
-- This applies even if the topic is about email or AI news
 
 RESPONSE LENGTH RULES:
 - Simple questions (greetings, yes/no, definitions) → short and concise
@@ -33,11 +46,13 @@ RESPONSE LENGTH RULES:
 - Lists and comparisons → cover all relevant points
 - Email drafts → complete professional emails, never cut short
 - Essays or long-form content → full complete content, no summaries
+- Recipes → include ALL ingredients with measurements and numbered steps
+- Language learning → include examples, pronunciation, and exercises
 
 NEVER say things like "I'll keep it brief" or truncate a response that deserves detail.
 NEVER use placeholders like "[Your Name]" or "[Add more here]" — always write complete content.
 
-ONLY when the user explicitly asks you to draft or compose an email, format your response EXACTLY like this and NOTHING ELSE:
+ONLY when the user explicitly asks to draft or compose an email, format your response EXACTLY like this and NOTHING ELSE:
 
 To: recipient@example.com
 Subject: Your subject here
@@ -47,7 +62,7 @@ Dear [Name],
 [Write complete paragraphs here]
 
 Best regards,
-AI Assistant
+ZENTRA AI
 
 EMAIL RULES:
 - Always sign off as "ZENTRA AI"
@@ -60,8 +75,8 @@ EMAIL RULES:
 - ONE email only — never write a second email
 - After "Best regards, ZENTRA AI" — STOP. Nothing more.
 
-For all other requests (questions, search results, news, explanations, code, etc.),
-respond in plain markdown. Never use To:/Subject:/Body: format."""
+For all other requests (questions, search results, news, explanations, recipes, language learning, code, etc.),
+respond in plain markdown. NEVER use To:/Subject:/Body: format."""
 
 CLASSIFY_PROMPT = """You are an email classifier. Given an email, classify it into exactly one of these categories:
 
@@ -97,7 +112,7 @@ ZENTRA AI
 
 Rules:
 - Never use placeholders like [Your Name]
-- Always sign off as ZENTRA AI 
+- Always sign off as ZENTRA AI
 - Be professional and concise
 - Address all points raised in the original email
 - After "Best regards, ZENTRA AI" STOP — no extra text"""
@@ -106,7 +121,8 @@ Rules:
 def parse_email_draft(response: str):
     """Check if response contains an email draft and extract only the first one."""
     try:
-        to_match = re.search(r"To:\s*([\w\.-]+@[\w\.-]+)", response)  # ✅ FIX: require real email address
+        # Only detect draft if response has a real email address in To: field
+        to_match = re.search(r"To:\s*([\w\.-]+@[\w\.-]+)", response)
         subject_match = re.search(r"Subject:\s*(.+)", response)
         body_match = re.search(r"Body:\s*\n([\s\S]+?)(?=\nTo:|$)", response)
 
@@ -173,6 +189,17 @@ Write a professional reply to this email."""
         return None
 
 
+def truncate_to_first_email(response: str) -> str:
+    """Keep only the first email draft if multiple exist."""
+    first_to = response.find("To:")
+    if first_to == -1:
+        return response
+    second_to = response.find("\nTo:", first_to + 1)
+    if second_to != -1:
+        return response[:second_to].strip()
+    return response
+
+
 def chat_node(state):
     add_message("user", state["input"])
 
@@ -181,10 +208,12 @@ def chat_node(state):
         *get_memory()
     ])
 
+    # Remove duplicate emails if any
+    response = truncate_to_first_email(response)
+
     add_message("assistant", response)
 
-    # ✅ FIX: Only detect draft if response has a real email address in the To: field
-    # This prevents news/chat responses from being mistaken for email drafts
+    # Only detect draft if response has a real email address in To: field
     draft = parse_email_draft(response)
 
     if draft:
