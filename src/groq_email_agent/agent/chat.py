@@ -201,19 +201,19 @@ def truncate_to_first_email(response: str) -> str:
 
 
 def chat_node(state):
-    add_message("user", state["input"])
+    user_id = state.get("user_id", "default")
+    
+    # Add to user specific memory
+    add_message("user", state["input"], user_id)
 
     response = llm.chat([
         {"role": "system", "content": SYSTEM_PROMPT},
-        *get_memory()
+        *get_memory(user_id)  # Get user specific memory
     ])
 
-    # Remove duplicate emails if any
-    response = truncate_to_first_email(response)
+    # Save to user specific memory
+    add_message("assistant", response, user_id)
 
-    add_message("assistant", response)
-
-    # Only detect draft if response has a real email address in To: field
     draft = parse_email_draft(response)
 
     if draft:

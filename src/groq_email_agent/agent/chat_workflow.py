@@ -12,34 +12,65 @@ import os
 import json
 
 # ===== FIRESTORE INIT =====
-if not firebase_admin._apps:
-    cred_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
-    if cred_json:
-        cred_dict = json.loads(cred_json)
-        cred = credentials.Certificate(cred_dict)
-    else:
-        cred = credentials.Certificate("serviceAccountKey.json")
-    firebase_admin.initialize_app(cred)
-
-db = firestore.client()
+try:
+    if not firebase_admin._apps:
+        cred_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
+        if cred_json:
+            cred_dict = json.loads(cred_json)
+            cred = credentials.Certificate(cred_dict)
+        else:
+            cred = credentials.Certificate("serviceAccountKey.json")
+        firebase_admin.initialize_app(cred)
+    db = firestore.client()
+    print("✅ Firestore connected successfully")
+except Exception as e:
+    print(f"❌ Firestore connection failed: {e}")
+    db = None
 
 # ===== FIRESTORE HELPERS =====
 def get_pending_email(user_id: str) -> dict:
-    doc = db.collection("pending_emails").document(user_id).get()
-    return doc.to_dict() if doc.exists else {}
+    if not db:
+        return {}
+    try:
+        doc = db.collection("pending_emails").document(user_id).get()
+        return doc.to_dict() if doc.exists else {}
+    except Exception as e:
+        print(f"❌ get_pending_email error: {e}")
+        return {}
 
 def set_pending_email(user_id: str, draft: dict):
-    db.collection("pending_emails").document(user_id).set(draft)
+    if not db:
+        return
+    try:
+        db.collection("pending_emails").document(user_id).set(draft)
+    except Exception as e:
+        print(f"❌ set_pending_email error: {e}")
 
 def delete_pending_email(user_id: str):
-    db.collection("pending_emails").document(user_id).delete()
+    if not db:
+        return
+    try:
+        db.collection("pending_emails").document(user_id).delete()
+    except Exception as e:
+        print(f"❌ delete_pending_email error: {e}")
 
 def get_cached_emails(user_id: str) -> list:
-    doc = db.collection("cached_emails").document(user_id).get()
-    return doc.to_dict().get("emails", []) if doc.exists else []
+    if not db:
+        return []
+    try:
+        doc = db.collection("cached_emails").document(user_id).get()
+        return doc.to_dict().get("emails", []) if doc.exists else []
+    except Exception as e:
+        print(f"❌ get_cached_emails error: {e}")
+        return []
 
 def set_cached_emails(user_id: str, emails: list):
-    db.collection("cached_emails").document(user_id).set({"emails": emails})
+    if not db:
+        return
+    try:
+        db.collection("cached_emails").document(user_id).set({"emails": emails})
+    except Exception as e:
+        print(f"❌ set_cached_emails error: {e}")
 
 
 class ChatState(TypedDict):
@@ -58,31 +89,37 @@ class ChatState(TypedDict):
 # ===== ROUTER NODE =====
 def router_node(state: ChatState) -> ChatState:
     state["mode"] = route(state["message"])
-    print(f"🔍 Mode: {state['mode']}")
+    print(f"🔍 Mode: {state['mode']} | User: {state['user_id']}")
     return state
 
 # ===== MEMORY MANAGEMENT NODES =====
 def add_to_memory_node(state: ChatState) -> ChatState:
+    """Add user message to per-user memory"""
     if state["mode"] not in ["cancel_email"]:
-        add_message("user", state["message"])
+        add_message("user", state["message"], state["user_id"])
+    state["memory"] = get_memory(state["user_id"])
     return state
 
 def update_memory_with_response_node(state: ChatState) -> ChatState:
+    """Add assistant response to per-user memory"""
     if state["response"]:
-        add_message("assistant", state["response"])
+        add_message("assistant", state["response"], state["user_id"])
+    state["memory"] = get_memory(state["user_id"])
     return state
 
 # ===== CHAT NODE =====
 def chat_node_handler(state: ChatState) -> ChatState:
     if state["mode"] in ["chat", "draft_and_send"]:
-        response = chat_node({"input": state["message"]})
+        response = chat_node({
+            "input": state["message"],
+            "user_id": state["user_id"]
+        })
         state["response"] = response.get("response", "")
         state["is_draft"] = response.get("is_draft", False)
         state["draft"] = response.get("draft", None)
 
         if state["is_draft"] and state["draft"]:
             state["pending_email"] = state["draft"]
-            # ✅ FIX: Save to Firestore instead of in-memory dict
             set_pending_email(state["user_id"], state["draft"])
             print(f"📧 Draft saved to Firestore for {state['user_id']}")
 
@@ -110,11 +147,10 @@ def read_email_node_handler(state: ChatState) -> ChatState:
             })
 
         state["cached_emails"] = classified
-        # ✅ FIX: Save to Firestore
         set_cached_emails(state["user_id"], classified)
         state["is_email_list"] = True
         state["emails"] = classified
-        state["response"] = f"📬 You have {len(classified)} unread emails."
+        state["response"] = f"📬 You have {len(classified)} unread emails. Here's what I found:"
 
     return state
 
@@ -124,23 +160,22 @@ def auto_reply_node_handler(state: ChatState) -> ChatState:
         index_match = re.search(r"\d+", state["message"])
         index = int(index_match.group(0)) - 1 if index_match else 0
 
-        # ✅ FIX: Load from Firestore
         cached = get_cached_emails(state["user_id"])
         state["cached_emails"] = cached
 
         if not cached:
-            state["response"] = "Please read emails first."
+            state["response"] = "Please read your emails first by saying 'read email'."
             return state
 
         if index >= len(cached):
-            state["response"] = f"Email {index + 1} not found."
+            state["response"] = f"Email {index + 1} not found. You have {len(cached)} emails."
             return state
 
         email = cached[index]
         reply_text = generate_reply(email)
 
         if not reply_text:
-            state["response"] = "❌ Could not generate reply."
+            state["response"] = "❌ Could not generate reply. Please try again."
             return state
 
         draft = {
@@ -150,7 +185,6 @@ def auto_reply_node_handler(state: ChatState) -> ChatState:
             "thread_id": email.get("id")
         }
         state["pending_email"] = draft
-        # ✅ FIX: Save to Firestore
         set_pending_email(state["user_id"], draft)
 
         state["response"] = f"To: {draft['to']}\nSubject: {draft['subject']}\nBody:\n{reply_text}"
@@ -162,24 +196,22 @@ def auto_reply_node_handler(state: ChatState) -> ChatState:
 # ===== SEND EMAIL NODE =====
 def send_email_node_handler(state: ChatState) -> ChatState:
     if state["mode"] == "send_email":
-        # ✅ FIX: Load from Firestore
         pending = get_pending_email(state["user_id"])
         state["pending_email"] = pending
 
-        if pending:
+        if pending and "to" in pending and "subject" in pending and "body" in pending:
             try:
                 send_email(
                     pending["to"],
                     pending["subject"],
                     pending["body"],
                 )
-                state["response"] = f"✅ Email sent to {pending['to']}."
-                # ✅ FIX: Delete from Firestore
+                state["response"] = f"✅ Email sent successfully to {pending['to']}."
                 delete_pending_email(state["user_id"])
             except Exception as e:
-                state["response"] = f"❌ Failed: {str(e)}"
+                state["response"] = f"❌ Failed to send email: {str(e)}"
         else:
-            state["response"] = "No draft found."
+            state["response"] = "❌ No email draft found. Please draft an email first."
 
     return state
 
@@ -188,11 +220,10 @@ def cancel_email_node_handler(state: ChatState) -> ChatState:
     if state["mode"] == "cancel_email":
         pending = get_pending_email(state["user_id"])
         if pending:
-            # ✅ FIX: Delete from Firestore
             delete_pending_email(state["user_id"])
-            state["response"] = "❌ Draft cancelled."
+            state["response"] = "❌ Email draft cancelled."
         else:
-            state["response"] = "No draft to cancel."
+            state["response"] = "No pending email draft to cancel."
 
     return state
 
@@ -206,12 +237,11 @@ def web_search_node_handler(state: ChatState) -> ChatState:
         results = search_web(search_query)
 
         direct_answer = results.get("answer", "")
-        top = results.get("results", [])[:3]  # ← Only top 3
+        top = results.get("results", [])[:3]
 
-        # Limit content to 500 chars per result
         context = "\n\n".join([
             f"Source: {r['title']}\n"
-            f"Content: {r['content'][:500]}"  # ← Limit chars
+            f"Content: {r['content'][:500]}"
             for r in top
         ])
 
@@ -227,12 +257,13 @@ Date: {today}
 Results:
 {full_context}
 
-RULES:
+STRICT RULES:
 - Use only results above
 - Never use training data
-- For prices: show exact figure and source
-- For news: show headlines and source
-- End with: Source: [name] | Date: {today}"""
+- Show prices exactly as found
+- Do NOT add disclaimers
+- End with: Source: [name] | Date: {today}""",
+            "user_id": state["user_id"]
         })
         state["response"] = response.get("response", "")
 
@@ -240,8 +271,9 @@ RULES:
 
 # ===== CLEAR MEMORY NODE =====
 def clear_memory_node(state: ChatState) -> ChatState:
+    """Clear per-user memory after sending email"""
     if state["mode"] == "send_email":
-        clear_memory()
+        clear_memory(state["user_id"])
         print(f"🧹 Memory cleared for {state['user_id']}")
     return state
 
@@ -296,7 +328,6 @@ def run_chat_workflow(user_id: str, message: str):
     try:
         graph = build_chat_graph()
 
-        # ✅ FIX: Load pending email from Firestore
         pending = get_pending_email(user_id)
 
         state = {
@@ -310,7 +341,7 @@ def run_chat_workflow(user_id: str, message: str):
             "emails": [],
             "pending_email": pending,
             "cached_emails": get_cached_emails(user_id),
-            "memory": get_memory(),
+            "memory": get_memory(user_id),
         }
 
         result = graph.invoke(state)
