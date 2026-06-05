@@ -73,9 +73,9 @@ export default function App() {
     }
 
     try {
-      // ✅ FIX: added axios.post(
       const res = await axios.post(`${API_URL}/chat`, {
         message: text,
+        user_id: user.uid,  // ✅ Added user_id
       });
 
       console.log("API response:", res.data);
@@ -100,9 +100,9 @@ export default function App() {
   const onSendDraft = async (draft) => {
     if (!draft) return;
     try {
-      // ✅ FIX: added axios.post(
       const res = await axios.post(`${API_URL}/chat`, {
         message: "send",
+        user_id: user.uid,  // ✅ Added user_id
       });
 
       setMessages((prev) =>
@@ -123,9 +123,9 @@ export default function App() {
 
   const onCancelDraft = async (msgIndex) => {
     try {
-      // ✅ FIX: added axios.post(
       await axios.post(`${API_URL}/chat`, {
         message: "cancel",
+        user_id: user.uid,  // ✅ Added user_id
       });
 
       setMessages((prev) =>
@@ -153,9 +153,9 @@ export default function App() {
     ]);
 
     try {
-      // ✅ FIX: added axios.post(
       const res = await axios.post(`${API_URL}/chat`, {
         message: `auto reply to email ${emailIndex}`,
+        user_id: user.uid,  // ✅ Added user_id
       });
 
       const msgId = await saveMessage(chatId, "bot", res.data.response);
