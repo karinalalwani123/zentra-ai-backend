@@ -86,13 +86,23 @@ class ChatState(TypedDict):
     cached_emails: list
     memory: list
 
-# ===== ROUTER NODE =====
+# ===== NODE 1: RESTORE STATE =====
+def restore_state_node(state: ChatState) -> ChatState:
+    """Restore state from Firestore"""
+    state["pending_email"] = get_pending_email(state["user_id"])
+    state["cached_emails"] = get_cached_emails(state["user_id"])
+    state["memory"] = get_memory(state["user_id"])
+    print(f"🔄 State restored for {state['user_id']}")
+    return state
+
+# ===== NODE 2: ROUTER =====
 def router_node(state: ChatState) -> ChatState:
+    """Detect user intent"""
     state["mode"] = route(state["message"])
     print(f"🔍 Mode: {state['mode']} | User: {state['user_id']}")
     return state
 
-# ===== MEMORY MANAGEMENT NODES =====
+# ===== NODE 3: ADD MEMORY =====
 def add_to_memory_node(state: ChatState) -> ChatState:
     """Add user message to per-user memory"""
     if state["mode"] not in ["cancel_email"]:
@@ -100,15 +110,9 @@ def add_to_memory_node(state: ChatState) -> ChatState:
     state["memory"] = get_memory(state["user_id"])
     return state
 
-def update_memory_with_response_node(state: ChatState) -> ChatState:
-    """Add assistant response to per-user memory"""
-    if state["response"]:
-        add_message("assistant", state["response"], state["user_id"])
-    state["memory"] = get_memory(state["user_id"])
-    return state
-
-# ===== CHAT NODE =====
+# ===== NODE 4: CHAT =====
 def chat_node_handler(state: ChatState) -> ChatState:
+    """Handle chat mode using Groq LLM"""
     if state["mode"] in ["chat", "draft_and_send"]:
         response = chat_node({
             "input": state["message"],
@@ -125,8 +129,9 @@ def chat_node_handler(state: ChatState) -> ChatState:
 
     return state
 
-# ===== EMAIL READING NODE =====
+# ===== NODE 5: READ EMAIL =====
 def read_email_node_handler(state: ChatState) -> ChatState:
+    """Read and classify emails from Gmail"""
     if state["mode"] == "read_email":
         emails = get_unread_emails()
 
@@ -154,8 +159,9 @@ def read_email_node_handler(state: ChatState) -> ChatState:
 
     return state
 
-# ===== AUTO REPLY NODE =====
+# ===== NODE 6: AUTO REPLY =====
 def auto_reply_node_handler(state: ChatState) -> ChatState:
+    """Generate professional reply to selected email"""
     if state["mode"] == "auto_reply":
         index_match = re.search(r"\d+", state["message"])
         index = int(index_match.group(0)) - 1 if index_match else 0
@@ -193,8 +199,9 @@ def auto_reply_node_handler(state: ChatState) -> ChatState:
 
     return state
 
-# ===== SEND EMAIL NODE =====
+# ===== NODE 7: SEND EMAIL =====
 def send_email_node_handler(state: ChatState) -> ChatState:
+    """Send pending email via Gmail API"""
     if state["mode"] == "send_email":
         pending = get_pending_email(state["user_id"])
         state["pending_email"] = pending
@@ -215,8 +222,9 @@ def send_email_node_handler(state: ChatState) -> ChatState:
 
     return state
 
-# ===== CANCEL EMAIL NODE =====
+# ===== NODE 8: CANCEL EMAIL =====
 def cancel_email_node_handler(state: ChatState) -> ChatState:
+    """Cancel pending draft"""
     if state["mode"] == "cancel_email":
         pending = get_pending_email(state["user_id"])
         if pending:
@@ -227,8 +235,9 @@ def cancel_email_node_handler(state: ChatState) -> ChatState:
 
     return state
 
-# ===== WEB SEARCH NODE =====
+# ===== NODE 9: WEB SEARCH =====
 def web_search_node_handler(state: ChatState) -> ChatState:
+    """Search web using Tavily and answer question"""
     if state["mode"] == "web":
         from datetime import date
         today = date.today().strftime("%d %B %Y")
@@ -269,12 +278,64 @@ STRICT RULES:
 
     return state
 
-# ===== CLEAR MEMORY NODE =====
+# ===== NODE 10: VALIDATE DRAFT =====
+def validate_draft_node(state: ChatState) -> ChatState:
+    """Validate draft has required fields"""
+    if state["is_draft"] and state["draft"]:
+        required = ["to", "subject", "body"]
+        if all(field in state["draft"] for field in required):
+            state["pending_email"] = state["draft"]
+            set_pending_email(state["user_id"], state["draft"])
+            print(f"✅ Draft validated for {state['user_id']}")
+        else:
+            state["response"] = "❌ Draft missing required fields."
+            state["is_draft"] = False
+    return state
+
+# ===== NODE 11: VALIDATE EMAIL =====
+def validate_email_address_node(state: ChatState) -> ChatState:
+    """Validate email address format"""
+    email_to_check = None
+
+    if state["pending_email"] and "to" in state["pending_email"]:
+        email_to_check = state["pending_email"]["to"]
+    elif state["draft"] and "to" in state["draft"]:
+        email_to_check = state["draft"]["to"]
+
+    if email_to_check:
+        if not re.match(r"[\w\.-]+@[\w\.-]+\.\w+", email_to_check):
+            state["response"] = f"❌ Invalid email address: {email_to_check}"
+            state["pending_email"] = {}
+            state["draft"] = None
+        else:
+            if state["draft"] and not state["pending_email"]:
+                state["pending_email"] = state["draft"]
+            print(f"✅ Email validated: {email_to_check}")
+
+    return state
+
+# ===== NODE 12: UPDATE MEMORY =====
+def update_memory_with_response_node(state: ChatState) -> ChatState:
+    """Add assistant response to per-user memory"""
+    if state["response"]:
+        add_message("assistant", state["response"], state["user_id"])
+    state["memory"] = get_memory(state["user_id"])
+    return state
+
+# ===== NODE 13: CLEAR MEMORY =====
 def clear_memory_node(state: ChatState) -> ChatState:
     """Clear per-user memory after sending email"""
     if state["mode"] == "send_email":
         clear_memory(state["user_id"])
         print(f"🧹 Memory cleared for {state['user_id']}")
+    return state
+
+# ===== NODE 14: ERROR HANDLER =====
+def error_handler_node(state: ChatState) -> ChatState:
+    """Handle any errors in workflow"""
+    if not state.get("response"):
+        state["response"] = "An error occurred. Please try again."
+        print(f"⚠️ Error handler triggered for {state['user_id']}")
     return state
 
 # ===== ROUTING LOGIC =====
@@ -285,20 +346,32 @@ def route_to_handler(state: ChatState) -> str:
 def build_chat_graph():
     graph = StateGraph(ChatState)
 
-    graph.add_node("router", router_node)
-    graph.add_node("add_memory", add_to_memory_node)
-    graph.add_node("chat", chat_node_handler)
-    graph.add_node("read_email", read_email_node_handler)
-    graph.add_node("auto_reply", auto_reply_node_handler)
-    graph.add_node("send_email", send_email_node_handler)
-    graph.add_node("cancel_email", cancel_email_node_handler)
-    graph.add_node("web_search", web_search_node_handler)
-    graph.add_node("update_memory", update_memory_with_response_node)
-    graph.add_node("clear_memory", clear_memory_node)
+    # Add all 14 nodes
+    graph.add_node("restore_state", restore_state_node)           # 1
+    graph.add_node("router", router_node)                         # 2
+    graph.add_node("add_memory", add_to_memory_node)              # 3
+    graph.add_node("chat", chat_node_handler)                     # 4
+    graph.add_node("read_email", read_email_node_handler)         # 5
+    graph.add_node("auto_reply", auto_reply_node_handler)         # 6
+    graph.add_node("send_email", send_email_node_handler)         # 7
+    graph.add_node("cancel_email", cancel_email_node_handler)     # 8
+    graph.add_node("web_search", web_search_node_handler)         # 9
+    graph.add_node("validate_draft", validate_draft_node)         # 10
+    graph.add_node("validate_email", validate_email_address_node) # 11
+    graph.add_node("update_memory", update_memory_with_response_node) # 12
+    graph.add_node("clear_memory", clear_memory_node)             # 13
+    graph.add_node("error_handler", error_handler_node)           # 14
 
-    graph.set_entry_point("router")
+    # Set entry point
+    graph.set_entry_point("restore_state")
+
+    # restore_state → router
+    graph.add_edge("restore_state", "router")
+
+    # router → add_memory
     graph.add_edge("router", "add_memory")
 
+    # add_memory → conditional routing
     graph.add_conditional_edges(
         "add_memory",
         route_to_handler,
@@ -307,19 +380,28 @@ def build_chat_graph():
             "draft_and_send": "chat",
             "read_email": "read_email",
             "auto_reply": "auto_reply",
-            "send_email": "send_email",
+            "send_email": "validate_email",
             "cancel_email": "cancel_email",
             "web": "web_search",
         }
     )
 
-    for node in ["chat", "read_email", "auto_reply", "web_search"]:
+    # chat → validate_draft → validate_email → update_memory
+    graph.add_edge("chat", "validate_draft")
+    graph.add_edge("validate_draft", "validate_email")
+    graph.add_edge("validate_email", "update_memory")
+
+    # Other handlers → update_memory
+    for node in ["read_email", "auto_reply", "web_search", "cancel_email"]:
         graph.add_edge(node, "update_memory")
 
+    # send_email → clear_memory → update_memory
     graph.add_edge("send_email", "clear_memory")
     graph.add_edge("clear_memory", "update_memory")
-    graph.add_edge("cancel_email", "update_memory")
-    graph.add_edge("update_memory", END)
+
+    # update_memory → error_handler → END
+    graph.add_edge("update_memory", "error_handler")
+    graph.add_edge("error_handler", END)
 
     return graph.compile()
 
@@ -327,8 +409,6 @@ def build_chat_graph():
 def run_chat_workflow(user_id: str, message: str):
     try:
         graph = build_chat_graph()
-
-        pending = get_pending_email(user_id)
 
         state = {
             "user_id": user_id,
@@ -339,9 +419,9 @@ def run_chat_workflow(user_id: str, message: str):
             "draft": None,
             "is_email_list": False,
             "emails": [],
-            "pending_email": pending,
-            "cached_emails": get_cached_emails(user_id),
-            "memory": get_memory(user_id),
+            "pending_email": {},
+            "cached_emails": [],
+            "memory": [],
         }
 
         result = graph.invoke(state)
