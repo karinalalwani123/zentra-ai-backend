@@ -322,10 +322,9 @@ def update_memory_with_response_node(state: ChatState) -> ChatState:
 
 # ===== NODE 13: CLEAR MEMORY =====
 def clear_memory_node(state: ChatState) -> ChatState:
-    """Clear per-user memory after sending email"""
-    if state["mode"] == "send_email":
-        clear_memory(state["user_id"])
-        print(f"🧹 Memory cleared for {state['user_id']}")
+    """Only clear draft context, not full memory"""
+    # Don't clear full memory — just let conversation continue
+    # Memory will naturally move old email content out after 10 messages
     return state
 
 # ===== NODE 14: ERROR HANDLER =====
