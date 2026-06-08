@@ -316,9 +316,7 @@ def validate_email_address_node(state: ChatState) -> ChatState:
 
 # ===== NODE 12: UPDATE MEMORY =====
 def update_memory_with_response_node(state: ChatState) -> ChatState:
-    """Add assistant response to per-user memory"""
-    if state["response"]:
-        add_message("assistant", state["response"], state["user_id"])
+    """Just update state memory field — chat_node already saved assistant response"""
     state["memory"] = get_memory(state["user_id"])
     return state
 
@@ -380,7 +378,7 @@ def build_chat_graph():
             "draft_and_send": "chat",
             "read_email": "read_email",
             "auto_reply": "auto_reply",
-            "send_email": "validate_email",
+            "send_email": "send_email",
             "cancel_email": "cancel_email",
             "web": "web_search",
         }

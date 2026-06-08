@@ -202,9 +202,6 @@ def truncate_to_first_email(response: str) -> str:
 
 def chat_node(state):
     user_id = state.get("user_id", "default")
-    
-    # Add to user specific memory
-    add_message("user", state["input"], user_id)
 
     response = llm.chat([
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -227,3 +224,4 @@ def chat_node(state):
         "response": response,
         "is_draft": False
     }
+
