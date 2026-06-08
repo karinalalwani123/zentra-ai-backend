@@ -1,6 +1,7 @@
 import API_URL from "../config";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { auth } from "../firebase";
 
 export default function ScheduleEmail({ onBack }) {
   const [to, setTo] = useState("");
@@ -12,10 +13,15 @@ export default function ScheduleEmail({ onBack }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const getUserId = () => {
+    const user = auth.currentUser;
+    return user ? user.uid : "default";
+  };
+
   const fetchJobs = async () => {
     try {
-      // ✅ FIX: fixed broken template literal
-      const res = await axios.get(`${API_URL}/scheduled-emails`);
+      const uid = getUserId();
+      const res = await axios.get(`${API_URL}/scheduled-emails?user_id=${uid}`);
       setJobs(res.data.jobs || []);
     } catch (e) {
       console.error("Failed to fetch jobs:", e);
@@ -46,15 +52,16 @@ export default function ScheduleEmail({ onBack }) {
     setLoading(true);
     try {
       const isoDate = sendAt + ":00";
+      const uid = getUserId();
 
-      console.log("Sending:", { to, subject, body, send_at: isoDate });
+      console.log("Sending:", { to, subject, body, send_at: isoDate, user_id: uid });
 
-      // ✅ FIX: fixed broken template literal
       const res = await axios.post(`${API_URL}/schedule-email`, {
         to,
         subject,
         body,
         send_at: isoDate,
+        user_id: uid,  // ✅ Added user_id
       });
 
       console.log("Response:", res.data);
