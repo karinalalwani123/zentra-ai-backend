@@ -9,7 +9,6 @@ from src.groq_email_agent.agent.chat_workflow import run_chat_workflow
 from src.groq_email_agent.tools.gmail_tools import get_unread_emails
 from src.groq_email_agent.tools.scheduler import schedule_email, get_scheduled_jobs, restore_pending_jobs
 
-
 import base64
 import requests
 from email.mime.text import MIMEText
@@ -33,6 +32,7 @@ class ScheduledEmail(BaseModel):
     subject: str
     body: str
     send_at: str
+    user_id: str = "default"
 
 class OAuthEmail(BaseModel):
     access_token: str
@@ -77,22 +77,25 @@ def send_mail(email: OAuthEmail):
 @app.post("/schedule-email")
 def schedule_mail(email: ScheduledEmail):
     send_at = datetime.fromisoformat(email.send_at)
-    result = schedule_email(email.to, email.subject, email.body, send_at)
+    result = schedule_email(
+        email.to,
+        email.subject,
+        email.body,
+        send_at,
+        email.user_id
+    )
     return result
 
 @app.get("/scheduled-emails")
-def get_scheduled():
-    return {"jobs": get_scheduled_jobs()}
+def get_scheduled(user_id: str = "default"):
+    return {"jobs": get_scheduled_jobs(user_id)}
 
 # ===== STARTUP EVENT =====
 @app.on_event("startup")
 def startup_event():
-    """Start keep-alive thread and restore pending jobs on server startup"""
-    
-    # Restore pending scheduled jobs from Firestore
+    # Restore pending scheduled jobs
     try:
         restore_pending_jobs()
-        print("✅ Pending scheduled jobs restored")
     except Exception as e:
         print(f"❌ Failed to restore scheduled jobs: {e}")
 
@@ -109,4 +112,8 @@ def startup_event():
 
     thread = threading.Thread(target=keep_alive, daemon=True)
     thread.start()
-    print("🔔 Keep-alive thread started"))
+    print("🔔 Keep-alive thread started")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
