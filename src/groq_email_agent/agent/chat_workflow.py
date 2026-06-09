@@ -88,7 +88,6 @@ class ChatState(TypedDict):
 
 # ===== NODE 1: RESTORE STATE =====
 def restore_state_node(state: ChatState) -> ChatState:
-    """Restore state from Firestore"""
     state["pending_email"] = get_pending_email(state["user_id"])
     state["cached_emails"] = get_cached_emails(state["user_id"])
     state["memory"] = get_memory(state["user_id"])
@@ -97,14 +96,13 @@ def restore_state_node(state: ChatState) -> ChatState:
 
 # ===== NODE 2: ROUTER =====
 def router_node(state: ChatState) -> ChatState:
-    """Detect user intent"""
     state["mode"] = route(state["message"])
     print(f"🔍 Mode: {state['mode']} | User: {state['user_id']}")
     return state
 
 # ===== NODE 3: ADD MEMORY =====
 def add_to_memory_node(state: ChatState) -> ChatState:
-    """Add user message to per-user memory"""
+    """Add user message to memory for ALL modes except cancel"""
     if state["mode"] not in ["cancel_email"]:
         add_message("user", state["message"], state["user_id"])
     state["memory"] = get_memory(state["user_id"])
@@ -112,26 +110,46 @@ def add_to_memory_node(state: ChatState) -> ChatState:
 
 # ===== NODE 4: CHAT =====
 def chat_node_handler(state: ChatState) -> ChatState:
-    """Handle chat mode using Groq LLM"""
     if state["mode"] in ["chat", "draft_and_send"]:
-        response = chat_node({
-            "input": state["message"],
-            "user_id": state["user_id"]
-        })
-        state["response"] = response.get("response", "")
-        state["is_draft"] = response.get("is_draft", False)
-        state["draft"] = response.get("draft", None)
+        user_id = state["user_id"]
 
-        if state["is_draft"] and state["draft"]:
-            state["pending_email"] = state["draft"]
-            set_pending_email(state["user_id"], state["draft"])
-            print(f"📧 Draft saved to Firestore for {state['user_id']}")
+        # Get memory — already has user message from add_to_memory_node
+        response = state["llm"].chat([
+            {"role": "system", "content": state["system_prompt"]},
+            *get_memory(user_id)
+        ]) if False else None
+
+        # Use chat_node but tell it NOT to add user message again
+        from ..llm.groq_client import GroqClient
+        from .chat import SYSTEM_PROMPT, parse_email_draft
+
+        llm = GroqClient()
+        raw_response = llm.chat([
+            {"role": "system", "content": SYSTEM_PROMPT},
+            *get_memory(user_id)
+        ])
+
+        # Only save assistant response — user already saved in add_to_memory_node
+        add_message("assistant", raw_response, user_id)
+
+        from .chat import truncate_to_first_email
+        raw_response = truncate_to_first_email(raw_response)
+
+        draft = parse_email_draft(raw_response)
+
+        state["response"] = raw_response
+        state["is_draft"] = bool(draft)
+        state["draft"] = draft
+
+        if draft:
+            state["pending_email"] = draft
+            set_pending_email(user_id, draft)
+            print(f"📧 Draft saved to Firestore for {user_id}")
 
     return state
 
 # ===== NODE 5: READ EMAIL =====
 def read_email_node_handler(state: ChatState) -> ChatState:
-    """Read and classify emails from Gmail"""
     if state["mode"] == "read_email":
         emails = get_unread_emails()
 
@@ -161,7 +179,6 @@ def read_email_node_handler(state: ChatState) -> ChatState:
 
 # ===== NODE 6: AUTO REPLY =====
 def auto_reply_node_handler(state: ChatState) -> ChatState:
-    """Generate professional reply to selected email"""
     if state["mode"] == "auto_reply":
         index_match = re.search(r"\d+", state["message"])
         index = int(index_match.group(0)) - 1 if index_match else 0
@@ -201,7 +218,6 @@ def auto_reply_node_handler(state: ChatState) -> ChatState:
 
 # ===== NODE 7: SEND EMAIL =====
 def send_email_node_handler(state: ChatState) -> ChatState:
-    """Send pending email via Gmail API"""
     if state["mode"] == "send_email":
         pending = get_pending_email(state["user_id"])
         state["pending_email"] = pending
@@ -224,7 +240,6 @@ def send_email_node_handler(state: ChatState) -> ChatState:
 
 # ===== NODE 8: CANCEL EMAIL =====
 def cancel_email_node_handler(state: ChatState) -> ChatState:
-    """Cancel pending draft"""
     if state["mode"] == "cancel_email":
         pending = get_pending_email(state["user_id"])
         if pending:
@@ -237,11 +252,12 @@ def cancel_email_node_handler(state: ChatState) -> ChatState:
 
 # ===== NODE 9: WEB SEARCH =====
 def web_search_node_handler(state: ChatState) -> ChatState:
-    """Search web using Tavily and answer question"""
     if state["mode"] == "web":
         from datetime import date
-        today = date.today().strftime("%d %B %Y")
+        from ..llm.groq_client import GroqClient
+        from .chat import SYSTEM_PROMPT
 
+        today = date.today().strftime("%d %B %Y")
         search_query = f"{state['message']} {today}"
         results = search_web(search_query)
 
@@ -259,8 +275,13 @@ def web_search_node_handler(state: ChatState) -> ChatState:
             full_context += f"Direct Answer: {direct_answer}\n\n"
         full_context += context
 
-        response = chat_node({
-            "input": f"""Answer: {state['message']}
+        # Use LLM directly — don't go through chat_node to avoid memory issues
+        llm = GroqClient()
+        response = llm.chat([
+            {"role": "system", "content": """You are a web search assistant.
+Answer questions using ONLY the provided search results.
+Never use training data. Always cite the source."""},
+            {"role": "user", "content": f"""Answer: {state['message']}
 Date: {today}
 
 Results:
@@ -271,16 +292,17 @@ STRICT RULES:
 - Never use training data
 - Show prices exactly as found
 - Do NOT add disclaimers
-- End with: Source: [name] | Date: {today}""",
-            "user_id": state["user_id"]
-        })
-        state["response"] = response.get("response", "")
+- End with: Source: [name] | Date: {today}"""}
+        ])
+
+        state["response"] = response
+        # Save web search response to memory
+        add_message("assistant", response, state["user_id"])
 
     return state
 
 # ===== NODE 10: VALIDATE DRAFT =====
 def validate_draft_node(state: ChatState) -> ChatState:
-    """Validate draft has required fields"""
     if state["is_draft"] and state["draft"]:
         required = ["to", "subject", "body"]
         if all(field in state["draft"] for field in required):
@@ -294,7 +316,6 @@ def validate_draft_node(state: ChatState) -> ChatState:
 
 # ===== NODE 11: VALIDATE EMAIL =====
 def validate_email_address_node(state: ChatState) -> ChatState:
-    """Validate email address format"""
     email_to_check = None
 
     if state["pending_email"] and "to" in state["pending_email"]:
@@ -316,23 +337,21 @@ def validate_email_address_node(state: ChatState) -> ChatState:
 
 # ===== NODE 12: UPDATE MEMORY =====
 def update_memory_with_response_node(state: ChatState) -> ChatState:
-    """Just update state memory field — chat_node already saved assistant response"""
+    """Just update state memory field"""
     state["memory"] = get_memory(state["user_id"])
     return state
 
 # ===== NODE 13: CLEAR MEMORY =====
 def clear_memory_node(state: ChatState) -> ChatState:
-    """Only clear draft context, not full memory"""
-    # Don't clear full memory — just let conversation continue
-    # Memory will naturally move old email content out after 10 messages
+    """Do not clear memory — preserve conversation context"""
     return state
 
 # ===== NODE 14: ERROR HANDLER =====
 def error_handler_node(state: ChatState) -> ChatState:
-    """Handle any errors in workflow"""
     if not state.get("response"):
         state["response"] = "An error occurred. Please try again."
         print(f"⚠️ Error handler triggered for {state['user_id']}")
+        print(f"⚠️ Mode: {state['mode']}")
     return state
 
 # ===== ROUTING LOGIC =====
@@ -343,32 +362,25 @@ def route_to_handler(state: ChatState) -> str:
 def build_chat_graph():
     graph = StateGraph(ChatState)
 
-    # Add all 14 nodes
-    graph.add_node("restore_state", restore_state_node)           # 1
-    graph.add_node("router", router_node)                         # 2
-    graph.add_node("add_memory", add_to_memory_node)              # 3
-    graph.add_node("chat", chat_node_handler)                     # 4
-    graph.add_node("read_email", read_email_node_handler)         # 5
-    graph.add_node("auto_reply", auto_reply_node_handler)         # 6
-    graph.add_node("send_email", send_email_node_handler)         # 7
-    graph.add_node("cancel_email", cancel_email_node_handler)     # 8
-    graph.add_node("web_search", web_search_node_handler)         # 9
-    graph.add_node("validate_draft", validate_draft_node)         # 10
-    graph.add_node("validate_email", validate_email_address_node) # 11
-    graph.add_node("update_memory", update_memory_with_response_node) # 12
-    graph.add_node("clear_memory", clear_memory_node)             # 13
-    graph.add_node("error_handler", error_handler_node)           # 14
+    graph.add_node("restore_state", restore_state_node)
+    graph.add_node("router", router_node)
+    graph.add_node("add_memory", add_to_memory_node)
+    graph.add_node("chat", chat_node_handler)
+    graph.add_node("read_email", read_email_node_handler)
+    graph.add_node("auto_reply", auto_reply_node_handler)
+    graph.add_node("send_email", send_email_node_handler)
+    graph.add_node("cancel_email", cancel_email_node_handler)
+    graph.add_node("web_search", web_search_node_handler)
+    graph.add_node("validate_draft", validate_draft_node)
+    graph.add_node("validate_email", validate_email_address_node)
+    graph.add_node("update_memory", update_memory_with_response_node)
+    graph.add_node("clear_memory", clear_memory_node)
+    graph.add_node("error_handler", error_handler_node)
 
-    # Set entry point
     graph.set_entry_point("restore_state")
-
-    # restore_state → router
     graph.add_edge("restore_state", "router")
-
-    # router → add_memory
     graph.add_edge("router", "add_memory")
 
-    # add_memory → conditional routing
     graph.add_conditional_edges(
         "add_memory",
         route_to_handler,
@@ -383,20 +395,15 @@ def build_chat_graph():
         }
     )
 
-    # chat → validate_draft → validate_email → update_memory
     graph.add_edge("chat", "validate_draft")
     graph.add_edge("validate_draft", "validate_email")
     graph.add_edge("validate_email", "update_memory")
 
-    # Other handlers → update_memory
     for node in ["read_email", "auto_reply", "web_search", "cancel_email"]:
         graph.add_edge(node, "update_memory")
 
-    # send_email → clear_memory → update_memory
     graph.add_edge("send_email", "clear_memory")
     graph.add_edge("clear_memory", "update_memory")
-
-    # update_memory → error_handler → END
     graph.add_edge("update_memory", "error_handler")
     graph.add_edge("error_handler", END)
 
