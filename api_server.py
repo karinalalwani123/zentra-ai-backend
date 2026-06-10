@@ -43,7 +43,11 @@ class OAuthEmail(BaseModel):
 # ===== KEEP ALIVE =====
 @app.get("/ping")
 def ping():
-    """Health check endpoint for UptimeRobot"""
+    """Health check — also restores any pending jobs"""
+    try:
+        restore_pending_jobs()
+    except Exception as e:
+        print(f"❌ restore error: {e}")
     return {"status": "ok", "message": "Backend is awake"}
 
 # ===== CHAT ENDPOINTS =====
