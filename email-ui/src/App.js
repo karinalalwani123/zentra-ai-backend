@@ -11,17 +11,16 @@ import RightSidebar from "./components/RightSidebar";
 import ChatWindow from "./components/ChatWindow";
 import Auth from "./components/Auth";
 import AdminPanel from "./pages/AdminPanel";
-import ScheduleEmail from "./pages/ScheduleEmail";
+// import ScheduleEmail from "./pages/ScheduleEmail"; ← HIDDEN
 
 import "./App.css";
-
 
 export default function App() {
   const [input, setInput] = useState("");
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [showScheduler, setShowScheduler] = useState(false);
+  // const [showScheduler, setShowScheduler] = useState(false); ← HIDDEN
 
   const {
     chats,
@@ -75,7 +74,7 @@ export default function App() {
     try {
       const res = await axios.post(`${API_URL}/chat`, {
         message: text,
-        user_id: user.uid,  // ✅ Added user_id
+        user_id: user.uid,
       });
 
       console.log("API response:", res.data);
@@ -102,7 +101,7 @@ export default function App() {
     try {
       const res = await axios.post(`${API_URL}/chat`, {
         message: "send",
-        user_id: user.uid,  // ✅ Added user_id
+        user_id: user.uid,
       });
 
       setMessages((prev) =>
@@ -125,7 +124,7 @@ export default function App() {
     try {
       await axios.post(`${API_URL}/chat`, {
         message: "cancel",
-        user_id: user.uid,  // ✅ Added user_id
+        user_id: user.uid,
       });
 
       setMessages((prev) =>
@@ -155,7 +154,7 @@ export default function App() {
     try {
       const res = await axios.post(`${API_URL}/chat`, {
         message: `auto reply to email ${emailIndex}`,
-        user_id: user.uid,  // ✅ Added user_id
+        user_id: user.uid,
       });
 
       const msgId = await saveMessage(chatId, "bot", res.data.response);
@@ -184,9 +183,10 @@ export default function App() {
     return <AdminPanel />;
   }
 
-  if (showScheduler) {
-    return <ScheduleEmail onBack={() => setShowScheduler(false)} />;
-  }
+  // Scheduler hidden — uncomment below to re-enable
+  // if (showScheduler) {
+  //   return <ScheduleEmail onBack={() => setShowScheduler(false)} />;
+  // }
 
   return (
     <div className="app-shell">
@@ -205,7 +205,8 @@ export default function App() {
         onCancelDraft={onCancelDraft}
         onAutoReply={onAutoReply}
       />
-      <RightSidebar onSchedule={() => setShowScheduler(true)} />
+      <RightSidebar />
+      {/* Scheduler hidden — pass onSchedule={() => setShowScheduler(true)} to re-enable */}
     </div>
   );
 }

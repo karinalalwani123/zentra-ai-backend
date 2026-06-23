@@ -43,7 +43,6 @@ class OAuthEmail(BaseModel):
 # ===== KEEP ALIVE =====
 @app.get("/ping")
 def ping():
-    """Health check — also restores any pending jobs"""
     try:
         restore_pending_jobs()
     except Exception as e:
