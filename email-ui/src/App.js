@@ -11,7 +11,7 @@ import RightSidebar from "./components/RightSidebar";
 import ChatWindow from "./components/ChatWindow";
 import Auth from "./components/Auth";
 import AdminPanel from "./pages/AdminPanel";
-// import ScheduleEmail from "./pages/ScheduleEmail"; ← HIDDEN
+import ScheduleEmail from "./pages/ScheduleEmail"; // ✅ Uncommented
 
 import "./App.css";
 
@@ -20,7 +20,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  // const [showScheduler, setShowScheduler] = useState(false); ← HIDDEN
+  const [showScheduler, setShowScheduler] = useState(false); // ✅ Uncommented
 
   const {
     chats,
@@ -183,10 +183,10 @@ export default function App() {
     return <AdminPanel />;
   }
 
-  // Scheduler hidden — uncomment below to re-enable
-  // if (showScheduler) {
-  //   return <ScheduleEmail onBack={() => setShowScheduler(false)} />;
-  // }
+  // ✅ Uncommented
+  if (showScheduler) {
+    return <ScheduleEmail onBack={() => setShowScheduler(false)} />;
+  }
 
   return (
     <div className="app-shell">
@@ -205,8 +205,8 @@ export default function App() {
         onCancelDraft={onCancelDraft}
         onAutoReply={onAutoReply}
       />
-      <RightSidebar />
-      {/* Scheduler hidden — pass onSchedule={() => setShowScheduler(true)} to re-enable */}
+      {/* ✅ onSchedule prop restored */}
+      <RightSidebar onSchedule={() => setShowScheduler(true)} />
     </div>
   );
 }
