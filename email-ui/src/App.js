@@ -11,7 +11,6 @@ import RightSidebar from "./components/RightSidebar";
 import ChatWindow from "./components/ChatWindow";
 import Auth from "./components/Auth";
 import AdminPanel from "./pages/AdminPanel";
-import ScheduleEmail from "./pages/ScheduleEmail"; // ✅ Uncommented
 
 import "./App.css";
 
@@ -20,7 +19,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [showScheduler, setShowScheduler] = useState(false); // ✅ Uncommented
 
   const {
     chats,
@@ -76,8 +74,6 @@ export default function App() {
         message: text,
         user_id: user.uid,
       });
-
-      console.log("API response:", res.data);
 
       const msgId = await saveMessage(chatId, "bot", res.data.response);
 
@@ -183,11 +179,6 @@ export default function App() {
     return <AdminPanel />;
   }
 
-  // ✅ Uncommented
-  if (showScheduler) {
-    return <ScheduleEmail onBack={() => setShowScheduler(false)} />;
-  }
-
   return (
     <div className="app-shell">
       <LeftSidebar
@@ -205,8 +196,7 @@ export default function App() {
         onCancelDraft={onCancelDraft}
         onAutoReply={onAutoReply}
       />
-      {/* ✅ onSchedule prop restored */}
-      <RightSidebar onSchedule={() => setShowScheduler(true)} />
+      <RightSidebar />
     </div>
   );
 }
