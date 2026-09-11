@@ -204,7 +204,6 @@ def chat_node(state):
     user_id = state.get("user_id", "default")
 
     # DON'T add user message — add_to_memory_node already did it
-    # add_message("user", state["input"], user_id)  ← REMOVED
 
     response = llm.chat([
         {"role": "system", "content": SYSTEM_PROMPT},

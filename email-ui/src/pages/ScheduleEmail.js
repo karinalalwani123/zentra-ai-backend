@@ -1,7 +1,9 @@
 import API_URL from "../config";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { auth } from "../firebase";
+
+const SENT_VISIBLE_MINUTES = 3; // change this to control how long "sent" stays visible
 
 export default function ScheduleEmail({ onBack }) {
   const [to, setTo] = useState("");
@@ -13,6 +15,9 @@ export default function ScheduleEmail({ onBack }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Tracks when each job was first seen with status "sent" (job.id -> timestamp)
+  const sentSeenAtRef = useRef({});
+
   const getUserId = () => {
     const user = auth.currentUser;
     return user ? user.uid : "default";
@@ -22,7 +27,16 @@ export default function ScheduleEmail({ onBack }) {
     try {
       const uid = getUserId();
       const res = await axios.get(`${API_URL}/scheduled-emails?user_id=${uid}`);
-      setJobs(res.data.jobs || []);
+      const fetched = res.data.jobs || [];
+
+      const now = Date.now();
+      fetched.forEach((job) => {
+        if (job.status === "sent" && !sentSeenAtRef.current[job.id]) {
+          sentSeenAtRef.current[job.id] = now;
+        }
+      });
+
+      setJobs(fetched);
     } catch (e) {
       console.error("Failed to fetch jobs:", e);
     }
@@ -54,17 +68,13 @@ export default function ScheduleEmail({ onBack }) {
       const isoDate = sendAt + ":00";
       const uid = getUserId();
 
-      console.log("Sending:", { to, subject, body, send_at: isoDate, user_id: uid });
-
       const res = await axios.post(`${API_URL}/schedule-email`, {
         to,
         subject,
         body,
         send_at: isoDate,
-        user_id: uid,  // ✅ Added user_id
+        user_id: uid,
       });
-
-      console.log("Response:", res.data);
 
       if (res.data.status === "scheduled") {
         setStatus(`Email scheduled for ${new Date(sendAt).toLocaleString()}`);
@@ -80,7 +90,6 @@ export default function ScheduleEmail({ onBack }) {
       }
     } catch (e) {
       console.error("Full error:", e);
-      console.error("Response data:", e.response?.data);
       setError(
         e.response?.data?.detail
           ? JSON.stringify(e.response.data.detail)
@@ -95,6 +104,18 @@ export default function ScheduleEmail({ onBack }) {
     if (s === "failed") return "badge-failed";
     return "badge-pending";
   };
+
+  // Show: all pending jobs + sent jobs seen within the last N minutes
+  const now = Date.now();
+  const visibleJobs = jobs.filter((job) => {
+    if (job.status === "pending") return true;
+    if (job.status === "sent") {
+      const seenAt = sentSeenAtRef.current[job.id];
+      if (!seenAt) return true; // just appeared this fetch, show it
+      return now - seenAt < SENT_VISIBLE_MINUTES * 60 * 1000;
+    }
+    return false; // failed and anything else stays hidden
+  });
 
   return (
     <div className="schedule-shell">
@@ -170,14 +191,14 @@ export default function ScheduleEmail({ onBack }) {
         {/* SCHEDULED JOBS */}
         <div className="schedule-jobs-card">
           <h3 className="schedule-section-title">
-            Scheduled Emails ({jobs.length})
+            Scheduled Emails ({visibleJobs.length})
           </h3>
 
-          {jobs.length === 0 ? (
+          {visibleJobs.length === 0 ? (
             <p className="schedule-empty">No scheduled emails yet</p>
           ) : (
             <div className="schedule-job-list">
-              {jobs.map((job, i) => (
+              {visibleJobs.map((job, i) => (
                 <div key={i} className="schedule-job-item">
                   <div className="schedule-job-top">
                     <span className="schedule-job-to">{job.to}</span>

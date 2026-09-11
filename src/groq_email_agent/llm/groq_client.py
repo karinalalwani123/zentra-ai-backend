@@ -5,7 +5,7 @@ class GroqClient:
     def __init__(self):
         self.client = Groq(api_key=Config.GROQ_API_KEY)
 
-    def chat(self, messages, model="llama-3.3-70b-versatile"):
+    def chat(self, messages, model="openai/gpt-oss-120b"):
         response = self.client.chat.completions.create(
             model=model,
             messages=messages,
